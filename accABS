@@ -1,0 +1,55 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+interface IEntryPoint {
+    function handleOps(bytes[] calldata ops, address beneficiary) external;
+}
+
+contract AccountAbstraction {
+    address public owner;
+    IEntryPoint public entryPoint;
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not the owner");
+        _;
+    }
+
+    constructor(address _entryPoint) {
+        owner = msg.sender;
+        entryPoint = IEntryPoint(_entryPoint);
+    }
+
+    // Change ownership of the contract
+    function setOwner(address newOwner) external onlyOwner {
+        owner = newOwner;
+    }
+
+    // Execute a transaction from this contract
+    function executeTransaction(
+        address to,
+        uint256 value,
+        bytes calldata data
+    ) external onlyOwner {
+        (bool success, ) = to.call{value: value}(data);
+        require(success, "Transaction failed");
+    }
+
+    // Validate a user's operation
+    function validateUserOp(
+        bytes memory userOp,
+        bytes32 userOpHash
+    ) external view returns (bool) {
+        // Example: Simple validation logic
+        // Add your own custom validation logic here
+        return keccak256(userOp) == userOpHash;
+    }
+
+    // Fallback function to receive Ether
+    receive() external payable {}
+
+    // Withdraw funds
+    function withdrawFunds(address payable to, uint256 amount) external onlyOwner {
+        require(address(this).balance >= amount, "Insufficient funds");
+        to.transfer(amount);
+    }
+}
